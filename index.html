@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Idea Board</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Group Idea Board</h1>
+            <p class="subtitle">Collaborate and capture inspiration</p>
+        </header>
+
+        <main>
+            <section class="setup-section">
+                <div class="card">
+                    <h2>Add Contributor</h2>
+                    <div class="input-group">
+                        <input type="text" id="nameInput" placeholder="Enter name...">
+                        <button id="addNameBtn">Add Name</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Share an Idea</h2>
+                    <div class="input-group">
+                        <select id="nameSelect">
+                            <option value="" disabled selected>Select your name</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <textarea id="ideaInput" placeholder="What's your brilliant idea?" rows="3"></textarea>
+                    </div>
+                    <button id="addIdeaBtn" class="primary-btn">Submit Idea</button>
+                </div>
+            </section>
+
+            <section class="board-section">
+                <h2>The Idea Board</h2>
+                <div id="ideaList" class="idea-grid">
+                    <!-- Ideas will be injected here -->
+                    <p class="empty-state">No ideas yet. Be the first to suggest one!</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
