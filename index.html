@@ -467,7 +467,7 @@ input:checked + .toggle-slider::before{transform:translateX(20px);background:var
                   </linearGradient>
                 </defs>
                 <circle class="ring-track" cx="110" cy="110" r="96"/>
-                <circle class="ring-prog" id="ringProg" cx="110" cy="110" r="96" stroke-dasharray="603" stroke-dashoffset="0"/>
+                <circle class="ring-prog" id="ringProg" cx="110" cy="110" r="96" stroke-dasharray="603.19" stroke-dashoffset="0"/>
               </svg>
               <div class="timer-center">
                 <div class="timer-time" id="timerDisplay">25:00</div>
@@ -623,12 +623,33 @@ function getGPALabel(gpa){if(gpa>=3.7)return'🏆 Distinction — Excellent!';if
 function animateCounter(el,target){const from=parseFloat(el.textContent)||0;const to=parseFloat(target);if(isNaN(to)){el.textContent=target;return;}const start=performance.now();const dur=800;function step(now){const p=Math.min((now-start)/dur,1);const eased=1-Math.pow(1-p,3);el.textContent=(from+(to-from)*eased).toFixed(2);if(p<1)requestAnimationFrame(step);else el.textContent=target;}requestAnimationFrame(step);}
 function copyGPA(){if(currentGPA===null)return;const text=`My UCSC GPA: ${currentGPA.toFixed(2)} / 4.00`;navigator.clipboard.writeText(text).then(()=>{const btn=document.getElementById('copyBtn');btn.textContent='✅ Copied!';setTimeout(()=>btn.innerHTML='📋 Copy GPA',2000);}).catch(()=>{alert('GPA: '+currentGPA.toFixed(2)+' / 4.00');});}
 
-const RING_CIRC=2*Math.PI*96;
-function updateTimerDisplay(){const s=timerState;const m=Math.floor(s.timeLeft/60);const sec=s.timeLeft%60;document.getElementById('timerDisplay').textContent=`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;const pct=1-(s.timeLeft/s.totalTime);document.getElementById('ringProg').style.strokeDashoffset=RING_CIRC*(1-pct);const labels={work:'Focus Time',short:'Short Break ☕',long:'Long Break 🌿'};document.getElementById('timerModeLabel').textContent=labels[s.mode];}
+const RING_CIRC=2*Math.PI*96; // 603.19
+function updateTimerDisplay(){
+  const s=timerState;
+  const t=Math.max(0,s.timeLeft);
+  const m=Math.floor(t/60),sec=t%60;
+  document.getElementById('timerDisplay').textContent=`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  // FIX: offset=0 → full ring (timer full), offset=RING_CIRC → empty ring (timer done)
+  const elapsed=s.totalTime-t;
+  const offset=s.totalTime>0?(elapsed/s.totalTime)*RING_CIRC:RING_CIRC;
+  document.getElementById('ringProg').style.strokeDashoffset=offset;
+  const labels={work:'Focus Time',short:'Short Break ☕',long:'Long Break 🌿'};
+  document.getElementById('timerModeLabel').textContent=labels[s.mode];
+}
 function setMode(mode){if(timerState.running)return;timerState.mode=mode;const d={work:timerState.settings.work,short:timerState.settings.short,long:timerState.settings.long};timerState.timeLeft=d[mode]*60;timerState.totalTime=timerState.timeLeft;document.querySelectorAll('.mode-pill').forEach(p=>p.classList.remove('active'));document.getElementById('mode'+mode.charAt(0).toUpperCase()+mode.slice(1)).classList.add('active');updateTimerDisplay();}
 function toggleTimer(){if(timerState.running)pauseTimer();else startTimer();}
-function startTimer(){timerState.running=true;document.getElementById('mainBtn').textContent='⏸';document.getElementById('timerCard').classList.add('timer-active');document.getElementById('liveBadge').classList.add('show');timerState.interval=setInterval(()=>{timerState.timeLeft--;updateTimerDisplay();if(timerState.timeLeft<=0)onTimerComplete();},1000);}
-function pauseTimer(){timerState.running=false;clearInterval(timerState.interval);document.getElementById('mainBtn').textContent='▶';document.getElementById('timerCard').classList.remove('timer-active');document.getElementById('liveBadge').classList.remove('show');}
+function startTimer(){
+  timerState.running=true;
+  document.getElementById('mainBtn').textContent='⏸';
+  document.getElementById('timerCard').classList.add('timer-active');
+  document.getElementById('liveBadge').classList.add('show');
+  // FIX: decrement only while >0, then stop — prevents going negative
+  timerState.interval=setInterval(()=>{
+    if(timerState.timeLeft>0){timerState.timeLeft--;updateTimerDisplay();}
+    if(timerState.timeLeft===0){clearInterval(timerState.interval);timerState.interval=null;onTimerComplete();}
+  },1000);
+}
+function pauseTimer(){timerState.running=false;clearInterval(timerState.interval);timerState.interval=null;document.getElementById('mainBtn').textContent='▶';document.getElementById('timerCard').classList.remove('timer-active');document.getElementById('liveBadge').classList.remove('show');}
 function resetTimer(){pauseTimer();const d={work:timerState.settings.work,short:timerState.settings.short,long:timerState.settings.long};timerState.timeLeft=d[timerState.mode]*60;timerState.totalTime=timerState.timeLeft;updateTimerDisplay();}
 function skipMode(){pauseTimer();if(timerState.mode==='work'){timerState.sessions++;if(timerState.sessions%timerState.settings.interval===0)setMode('long');else setMode('short');}else setMode('work');renderSessionDots();}
 function onTimerComplete(){
