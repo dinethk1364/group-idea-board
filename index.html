@@ -1301,9 +1301,13 @@ function startTimer() {
   document.getElementById('liveBadge').classList.add('show');
 
   timerState.interval = setInterval(() => {
-    timerState.timeLeft--;
-    updateTimerDisplay();
-    if (timerState.timeLeft <= 0) onTimerComplete();
+    if (timerState.timeLeft > 0) {
+      timerState.timeLeft--;
+      updateTimerDisplay();
+    }
+    if (timerState.timeLeft <= 0) {
+      onTimerComplete();
+    }
   }, 1000);
 }
 
@@ -1338,8 +1342,12 @@ function skipMode() {
 
 function onTimerComplete() {
   pauseTimer();
+  timerState.timeLeft = 0;
+  updateTimerDisplay();
   playBell();
   launchConfetti();
+
+  const msg = timerState.mode === 'work' ? "Work session complete! Time for a break." : "Break over! Time to focus.";
 
   if (timerState.mode === 'work') {
     timerState.sessions++;
@@ -1364,20 +1372,24 @@ function onTimerComplete() {
     document.getElementById('statFocusTime').textContent = timerState.focusMinutes + 'm';
 
     addActivity(`Completed focus session #${timerState.sessions}`, '✅', 'act-green');
-
-    const longAfter = timerState.settings.interval;
-    if (timerState.sessions % longAfter === 0) setMode('long');
-    else setMode('short');
   } else {
     timerState.breaks++;
     document.getElementById('statBreaks').textContent = timerState.breaks;
     addActivity('Break completed — time to focus!', '☕', 'act-gold');
-    setMode('work');
   }
 
-  renderSessionDots();
-  // New tip
-  document.getElementById('tipText').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  setTimeout(() => {
+    alert("🔔 Timer Ended!\n" + msg);
+    if (timerState.mode === 'work') {
+      const longAfter = timerState.settings.interval;
+      if (timerState.sessions % longAfter === 0) setMode('long');
+      else setMode('short');
+    } else {
+      setMode('work');
+    }
+    renderSessionDots();
+    document.getElementById('tipText').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
+  }, 100);
 }
 
 function renderSessionDots() {
