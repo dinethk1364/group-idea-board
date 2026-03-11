@@ -3092,8 +3092,11 @@
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg></button>
       </div>
-      <div class="field"><label class="field-label">Title *</label><input class="field-input" id="ibFormTitle"
-          type="text" placeholder="What's your idea?" maxlength="90"></div>
+      <div class="field"><label class="field-label"
+          style="display:flex;justify-content:space-between;align-items:center;">Title * <span id="ibTitleCounter"
+            style="font-size:11px;font-weight:500;color:var(--text-sec);font-family:'JetBrains Mono',monospace;transition:color 0.2s">0
+            / 200</span></label><input class="field-input" id="ibFormTitle" type="text" placeholder="What's your idea?"
+          maxlength="200" oninput="ibUpdateTitleCounter(this)"></div>
       <div class="field"><label class="field-label">Author</label><input class="field-input" id="ibFormAuthor"
           type="text" placeholder="Your name"></div>
       <div class="field"><label class="field-label">Category</label><select class="field-select" id="ibFormCategory">
@@ -3427,8 +3430,9 @@
     function ibOpenModal() { document.getElementById('ibModalOverlay').classList.add('open'); document.getElementById('fab').classList.add('active'); setTimeout(() => document.getElementById('ibFormTitle').focus(), 80); }
     function ibCloseModal() { document.getElementById('ibModalOverlay').classList.remove('open'); document.getElementById('fab').classList.remove('active'); ibClearForm(); }
     function ibOverlayClick(e) { if (e.target === document.getElementById('ibModalOverlay')) ibCloseModal(); }
-    function ibClearForm() { ['ibFormTitle', 'ibFormAuthor', 'ibFormDesc'].forEach(id => { const el = document.getElementById(id); if (el) { el.value = ''; el.classList.remove('error'); } }); ibFormTags = []; ibRenderChips(); }
+    function ibClearForm() { ['ibFormTitle', 'ibFormAuthor', 'ibFormDesc'].forEach(id => { const el = document.getElementById(id); if (el) { el.value = ''; el.classList.remove('error'); } }); ibFormTags = []; ibRenderChips(); const c = document.getElementById('ibTitleCounter'); if (c) { c.textContent = '0 / 200'; c.style.color = 'var(--text-sec)'; }; }
 
+    function ibUpdateTitleCounter(input) { const len = input.value.length; const counter = document.getElementById("ibTitleCounter"); if (counter) { counter.textContent = len + " / 200"; counter.style.color = len > 180 ? "var(--error)" : len > 150 ? "var(--warning)" : "var(--text-sec)"; } }
     function ibTagKey(e) { const input = e.target; if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const raw = input.value.trim().toLowerCase(); const val = raw.replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''); if (val && !ibFormTags.includes(val) && ibFormTags.length < 6) { ibFormTags.push(val); ibRenderChips(); } input.value = ''; } else if (e.key === 'Backspace' && !input.value && ibFormTags.length) { ibFormTags.pop(); ibRenderChips(); } }
     function ibRemoveChip(tag) { ibFormTags = ibFormTags.filter(t => t !== tag); ibRenderChips(); }
     function ibRenderChips() { const wrap = document.getElementById('ibChipsWrap'); const input = document.getElementById('ibChipsInput'); wrap.innerHTML = ''; ibFormTags.forEach(t => { const s = document.createElement('span'); s.className = 'chip'; s.innerHTML = `${esc(t)} <span class="chip-x" onclick="ibRemoveChip('${esc(t)}')">×</span>`; wrap.appendChild(s); }); wrap.appendChild(input); }
@@ -3439,6 +3443,7 @@
       const cat = document.getElementById('ibFormCategory').value;
       const desc = document.getElementById('ibFormDesc').value.trim();
       if (!title) { const inp = document.getElementById('ibFormTitle'); inp.classList.add('error'); inp.focus(); setTimeout(() => inp.classList.remove('error'), 1600); showToast('⚠️ Please enter a title'); return; }
+      if (title.length > 200) { const inp = document.getElementById('ibFormTitle'); inp.classList.add('error'); inp.focus(); setTimeout(() => inp.classList.remove('error'), 1600); showToast('⚠️ Title exceeds 200 characters!'); return; }
       const duplicate = ibIdeas.some(i => i.title.trim().toLowerCase() === title.toLowerCase());
       if (duplicate) { const inp = document.getElementById('ibFormTitle'); inp.classList.add('error'); inp.focus(); setTimeout(() => inp.classList.remove('error'), 1600); showToast('⚠️ This idea already exists!'); return; }
       const member = IB_MEMBERS.find(m => m.name.toLowerCase() === author.toLowerCase());
