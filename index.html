@@ -3439,6 +3439,8 @@
       const cat = document.getElementById('ibFormCategory').value;
       const desc = document.getElementById('ibFormDesc').value.trim();
       if (!title) { const inp = document.getElementById('ibFormTitle'); inp.classList.add('error'); inp.focus(); setTimeout(() => inp.classList.remove('error'), 1600); showToast('⚠️ Please enter a title'); return; }
+      const duplicate = ibIdeas.some(i => i.title.trim().toLowerCase() === title.toLowerCase());
+      if (duplicate) { const inp = document.getElementById('ibFormTitle'); inp.classList.add('error'); inp.focus(); setTimeout(() => inp.classList.remove('error'), 1600); showToast('⚠️ This idea already exists!'); return; }
       const member = IB_MEMBERS.find(m => m.name.toLowerCase() === author.toLowerCase());
       const color = member ? member.color : IB_COLORS[Math.floor(Math.random() * IB_COLORS.length)];
       const idea = { id: ++ibNextId, title, author, avatar: author.charAt(0).toUpperCase(), color, category: cat, tags: ibFormTags.length ? [...ibFormTags] : ['idea'], votes: 0, timestamp: 'just now', ts: Date.now(), desc, voted: false, expanded: false };
