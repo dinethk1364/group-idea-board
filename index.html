@@ -3276,7 +3276,17 @@
 
     function launchToolkitConfetti() { const colors = ['#800000', '#F4D569', '#A52A2A', '#10B981', '#ffffff']; for (let i = 0; i < 40; i++) { const el = document.createElement('div'); el.className = 'confetti-piece'; el.style.cssText = `left:${Math.random() * 100}vw;top:0;background:${colors[Math.floor(Math.random() * colors.length)]};width:${4 + Math.random() * 8}px;height:${4 + Math.random() * 8}px;border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation-delay:${Math.random() * 0.5}s;animation-duration:${1 + Math.random() * 1}s;`; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); } }
 
-    function addActivity(text, ico, cls) { const list = document.getElementById('activityList'); const item = document.createElement('div'); item.className = 'activity-item'; item.style.animation = 'slideRowIn 0.3s ease both'; const now = new Date(); const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'); item.innerHTML = `<div class="act-ico ${cls}">${ico}</div><div class="act-info"><div class="act-title-t">${text}</div><div class="act-time-t">Today at ${time}</div></div>`; list.insertBefore(item, list.firstChild); if (list.children.length > 10) list.lastChild.remove(); }
+    function addActivity(text, ico, cls) {
+      const list = document.getElementById('activityList');
+      const item = document.createElement('div'); item.className = 'activity-item'; item.style.animation = 'slideRowIn 0.3s ease both';
+      const now = new Date(); const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+      const icoEl = document.createElement('div'); icoEl.className = 'act-ico ' + cls; icoEl.textContent = ico;
+      const info = document.createElement('div'); info.className = 'act-info';
+      const titleEl = document.createElement('div'); titleEl.className = 'act-title-t'; titleEl.textContent = text;
+      const timeEl = document.createElement('div'); timeEl.className = 'act-time-t'; timeEl.textContent = 'Today at ' + time;
+      info.appendChild(titleEl); info.appendChild(timeEl); item.appendChild(icoEl); item.appendChild(info);
+      list.insertBefore(item, list.firstChild); if (list.children.length > 10) list.lastChild.remove();
+    }
 
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
 
@@ -3322,9 +3332,20 @@
       ibRenderSidebar(); ibUpdateBadges(); ibUpdateStats(); ibRenderTagCloud(); ibRenderIdeas();
     }
 
+    function sanitizeColor(c) { return /^#[0-9a-fA-F]{3,8}$/.test(String(c).trim()) ? c : '#800000'; }
+    function sanitizeAvatar(a) { const s = String(a).trim(); return s.length > 0 ? s[0].toUpperCase() : '?'; }
     function ibRenderSidebar() {
       const counts = {}; ibIdeas.forEach(i => counts[i.author] = (counts[i.author] || 0) + 1);
-      document.getElementById('ibMembersList').innerHTML = IB_MEMBERS.map(m => `<div class="member-row"><div class="av-sm" style="background:${m.color}">${m.avatar}</div><div><div class="member-name-t">${esc(m.name)}</div><div class="member-count-t">${counts[m.name] || 0} idea${(counts[m.name] || 0) !== 1 ? 's' : ''}</div></div></div>`).join('');
+      const list = document.getElementById('ibMembersList'); list.innerHTML = '';
+      IB_MEMBERS.forEach(m => {
+        const row = document.createElement('div'); row.className = 'member-row';
+        const av = document.createElement('div'); av.className = 'av-sm'; av.style.background = sanitizeColor(m.color); av.textContent = sanitizeAvatar(m.avatar);
+        const info = document.createElement('div');
+        const name = document.createElement('div'); name.className = 'member-name-t'; name.textContent = m.name;
+        const cnt = counts[m.name] || 0;
+        const count = document.createElement('div'); count.className = 'member-count-t'; count.textContent = cnt + ' idea' + (cnt !== 1 ? 's' : '');
+        info.appendChild(name); info.appendChild(count); row.appendChild(av); row.appendChild(info); list.appendChild(row);
+      });
       document.getElementById('ibActiveCount').textContent = IB_MEMBERS.length;
     }
     function ibUpdateBadges() {
@@ -3349,7 +3370,13 @@
     function ibRenderTagCloud() {
       const tc = {}; ibIdeas.forEach(i => i.tags.forEach(t => tc[t] = (tc[t] || 0) + 1));
       const sorted = Object.keys(tc).sort((a, b) => tc[b] - tc[a]);
-      document.getElementById('ibTagCloud').innerHTML = sorted.map(t => `<div class="tag-pill${ibFilterTagVal === t ? ' active' : ''}" onclick="ibClickTag(this,'${esc(t)}')">${esc(t)}</div>`).join('');
+      const cloud = document.getElementById('ibTagCloud'); cloud.innerHTML = '';
+      sorted.forEach(t => {
+        const pill = document.createElement('div'); pill.className = 'tag-pill' + (ibFilterTagVal === t ? ' active' : '');
+        pill.textContent = t; pill.dataset.tag = t;
+        pill.addEventListener('click', function () { ibClickTag(this, this.dataset.tag); });
+        cloud.appendChild(pill);
+      });
     }
 
     function ibGetFiltered() {
@@ -3382,32 +3409,48 @@
       const grid = document.getElementById('ibIdeasGrid');
       const list = ibGetFiltered();
       document.getElementById('ibIdeasCount').textContent = '(' + list.length + ')';
-      if (!list.length) { grid.innerHTML = `<div class="ib-empty"><div class="ib-empty-icon">💡</div><div class="ib-empty-title">No ideas found</div><div class="ib-empty-sub">Try a different filter or add one!</div></div>`; return; }
-      grid.innerHTML = list.map(ibBuildCard).join('');
+      if (!list.length) {
+        grid.innerHTML = '';
+        const empty = document.createElement('div'); empty.className = 'ib-empty';
+        const icon = document.createElement('div'); icon.className = 'ib-empty-icon'; icon.textContent = '💡';
+        const title = document.createElement('div'); title.className = 'ib-empty-title'; title.textContent = 'No ideas found';
+        const sub = document.createElement('div'); sub.className = 'ib-empty-sub'; sub.textContent = 'Try a different filter or add one!';
+        empty.appendChild(icon); empty.appendChild(title); empty.appendChild(sub); grid.appendChild(empty);
+        return;
+      }
+      grid.innerHTML = '';
+      list.forEach((idea, i) => { grid.appendChild(ibBuildCard(idea)); });
       grid.querySelectorAll('.idea-card').forEach((el, i) => { setTimeout(() => el.classList.add('visible'), i * 40); });
     }
 
     function ibBuildCard(idea) {
+      const id = Number(idea.id);
       const catCls = IB_CAT_CLS[idea.category] || 'cat-blue';
-      const tagsHtml = idea.tags.map(t => `<span class="card-tag" onclick="event.stopPropagation();ibQuickTag('${esc(t)}')">#${esc(t)}</span>`).join('');
-      return `<div class="idea-card${idea.expanded ? ' expanded' : ''}" id="ibCard-${idea.id}" onclick="ibToggleExpand(${idea.id})">
-    <span class="card-cat ${catCls}">${esc(idea.category)}</span>
-    <div class="card-title-t">${esc(idea.title)}</div>
-    <div class="card-desc-t">${esc(idea.desc || '')}</div>
-    <div class="card-tags">${tagsHtml}</div>
-    <div class="card-footer-t">
-      <div class="card-author-t"><div class="av-sm" style="background:${idea.color}">${idea.avatar}</div><div><div class="author-name-t">${esc(idea.author)}</div><div class="card-time-t">${esc(idea.timestamp)}</div></div></div>
-      <button class="vote-btn${idea.voted ? ' voted' : ''}" onclick="event.stopPropagation();ibVote(${idea.id},this)" title="Vote">
-        <svg width="13" height="13" fill="${idea.voted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        <span class="vc">${idea.votes}</span>
-      </button>
-      <button class="del-btn" onclick="event.stopPropagation();ibDeleteIdea(${idea.id})" title="Delete">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
-      </button>
-    </div>
-  </div>`;
+      const card = document.createElement('div');
+      card.className = 'idea-card' + (idea.expanded ? ' expanded' : '');
+      card.id = 'ibCard-' + id;
+      card.addEventListener('click', () => ibToggleExpand(id));
+      const cat = document.createElement('span'); cat.className = 'card-cat ' + catCls; cat.textContent = idea.category || ''; card.appendChild(cat);
+      const titleEl = document.createElement('div'); titleEl.className = 'card-title-t'; titleEl.textContent = idea.title || ''; card.appendChild(titleEl);
+      const descEl = document.createElement('div'); descEl.className = 'card-desc-t'; descEl.textContent = idea.desc || ''; card.appendChild(descEl);
+      const tagsEl = document.createElement('div'); tagsEl.className = 'card-tags';
+      (idea.tags || []).forEach(t => { const tag = document.createElement('span'); tag.className = 'card-tag'; tag.textContent = '#' + t; tag.dataset.tag = t; tag.addEventListener('click', e => { e.stopPropagation(); ibQuickTag(tag.dataset.tag); }); tagsEl.appendChild(tag); });
+      card.appendChild(tagsEl);
+      const footer = document.createElement('div'); footer.className = 'card-footer-t';
+      const authorWrap = document.createElement('div'); authorWrap.className = 'card-author-t';
+      const av = document.createElement('div'); av.className = 'av-sm'; av.style.background = sanitizeColor(idea.color); av.textContent = sanitizeAvatar(idea.avatar);
+      const authorInfo = document.createElement('div');
+      const authorName = document.createElement('div'); authorName.className = 'author-name-t'; authorName.textContent = idea.author || '';
+      const timeEl = document.createElement('div'); timeEl.className = 'card-time-t'; timeEl.textContent = idea.timestamp || '';
+      authorInfo.appendChild(authorName); authorInfo.appendChild(timeEl); authorWrap.appendChild(av); authorWrap.appendChild(authorInfo); footer.appendChild(authorWrap);
+      const voteBtn = document.createElement('button'); voteBtn.className = 'vote-btn' + (idea.voted ? ' voted' : ''); voteBtn.title = 'Vote';
+      voteBtn.innerHTML = '<svg width="13" height="13" fill="' + (idea.voted ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span class="vc">' + (+idea.votes) + '</span>';
+      voteBtn.addEventListener('click', e => { e.stopPropagation(); ibVote(id, voteBtn); }); footer.appendChild(voteBtn);
+      const delBtn = document.createElement('button'); delBtn.className = 'del-btn'; delBtn.title = 'Delete';
+      delBtn.innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>';
+      delBtn.addEventListener('click', e => { e.stopPropagation(); ibDeleteIdea(id); }); footer.appendChild(delBtn);
+      card.appendChild(footer); return card;
     }
-
     function ibQuickTag(tag) { ibFilterTagVal = tag; ibFilterCatVal = ''; document.querySelectorAll('.ib-sb-btn').forEach(b => b.classList.remove('active')); document.querySelector('.ib-sb-btn[data-cat=""]').classList.add('active'); document.querySelectorAll('.tag-pill').forEach(p => p.classList.toggle('active', p.textContent === tag)); ibRenderIdeas(); }
     function ibToggleExpand(id) { const idea = ibIdeas.find(i => i.id === id); if (!idea || !idea.desc) return; idea.expanded = !idea.expanded; const card = document.getElementById('ibCard-' + id); if (card) card.classList.toggle('expanded', idea.expanded); }
     function ibVote(id, btn) {
@@ -3435,7 +3478,18 @@
     function ibUpdateTitleCounter(input) { const len = input.value.length; const counter = document.getElementById("ibTitleCounter"); if (counter) { counter.textContent = len + " / 200"; counter.style.color = len > 180 ? "var(--error)" : len > 150 ? "var(--warning)" : "var(--text-sec)"; } }
     function ibTagKey(e) { const input = e.target; if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); const raw = input.value.trim().toLowerCase(); const val = raw.replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''); if (val && !ibFormTags.includes(val) && ibFormTags.length < 6) { ibFormTags.push(val); ibRenderChips(); } input.value = ''; } else if (e.key === 'Backspace' && !input.value && ibFormTags.length) { ibFormTags.pop(); ibRenderChips(); } }
     function ibRemoveChip(tag) { ibFormTags = ibFormTags.filter(t => t !== tag); ibRenderChips(); }
-    function ibRenderChips() { const wrap = document.getElementById('ibChipsWrap'); const input = document.getElementById('ibChipsInput'); wrap.innerHTML = ''; ibFormTags.forEach(t => { const s = document.createElement('span'); s.className = 'chip'; s.innerHTML = `${esc(t)} <span class="chip-x" onclick="ibRemoveChip('${esc(t)}')">×</span>`; wrap.appendChild(s); }); wrap.appendChild(input); }
+    function ibRenderChips() {
+      const wrap = document.getElementById('ibChipsWrap'); const input = document.getElementById('ibChipsInput');
+      wrap.innerHTML = '';
+      ibFormTags.forEach(t => {
+        const s = document.createElement('span'); s.className = 'chip';
+        const label = document.createTextNode(t + ' ');
+        const x = document.createElement('span'); x.className = 'chip-x'; x.textContent = '×'; x.dataset.tag = t;
+        x.addEventListener('click', function () { ibRemoveChip(this.dataset.tag); });
+        s.appendChild(label); s.appendChild(x); wrap.appendChild(s);
+      });
+      wrap.appendChild(input);
+    }
 
     function ibSubmitIdea() {
       const title = document.getElementById('ibFormTitle').value.trim();
@@ -3448,7 +3502,8 @@
       if (duplicate) { const inp = document.getElementById('ibFormTitle'); inp.classList.add('error'); inp.focus(); setTimeout(() => inp.classList.remove('error'), 1600); showToast('⚠️ This idea already exists!'); return; }
       const member = IB_MEMBERS.find(m => m.name.toLowerCase() === author.toLowerCase());
       const color = member ? member.color : IB_COLORS[Math.floor(Math.random() * IB_COLORS.length)];
-      const idea = { id: ++ibNextId, title, author, avatar: author.charAt(0).toUpperCase(), color, category: cat, tags: ibFormTags.length ? [...ibFormTags] : ['idea'], votes: 0, timestamp: 'just now', ts: Date.now(), desc, voted: false, expanded: false };
+      const safeColor = sanitizeColor(color); const safeAvatar = sanitizeAvatar(author.charAt(0).toUpperCase());
+      const idea = { id: ++ibNextId, title, author, avatar: safeAvatar, color: safeColor, category: cat, tags: ibFormTags.length ? [...ibFormTags] : ['idea'], votes: 0, timestamp: 'just now', ts: Date.now(), desc, voted: false, expanded: false };
       if (!IB_MEMBERS.find(m => m.name === author)) IB_MEMBERS.push({ name: author, avatar: idea.avatar, color });
       ibIdeas.unshift(idea); ibSaveData(); ibCloseModal(); ibRenderIdeas(); ibRenderTagCloud(); ibUpdateBadges(); ibUpdateStats(); ibRenderSidebar(); ibLaunchConfetti(); showToast('🎉 Idea added!');
     }
