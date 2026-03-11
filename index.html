@@ -3319,18 +3319,48 @@
     let ibIdeas = []; let ibNextId = 20;
     let ibFilterCatVal = '', ibFilterTagVal = '', ibSearchVal = '', ibSortVal = 'newest', ibViewMode = 'grid', ibFormTags = [];
 
+    // ── PERSISTENCE: load from localStorage, falling back to defaults ──
     function ibLoadData() {
       try {
         const raw = localStorage.getItem(IB_LS);
-        if (raw) { const p = JSON.parse(raw); ibIdeas = p.ideas || JSON.parse(JSON.stringify(IB_DEFAULT_IDEAS)); ibNextId = p.nextId || 20; }
-        else { ibIdeas = JSON.parse(JSON.stringify(IB_DEFAULT_IDEAS)); }
-      } catch (e) { ibIdeas = JSON.parse(JSON.stringify(IB_DEFAULT_IDEAS)); }
+        if (raw) {
+          const p = JSON.parse(raw);
+          // Ensure we always get a valid array, even if the stored data is malformed
+          ibIdeas = Array.isArray(p.ideas) ? p.ideas : JSON.parse(JSON.stringify(IB_DEFAULT_IDEAS));
+          ibNextId = (typeof p.nextId === 'number' && p.nextId > 0) ? p.nextId : 20;
+        } else {
+          // First visit — seed with defaults
+          ibIdeas = JSON.parse(JSON.stringify(IB_DEFAULT_IDEAS));
+          ibNextId = 20;
+        }
+      } catch (e) {
+        console.warn('[IdeaBoard] Failed to load data from localStorage:', e);
+        ibIdeas = JSON.parse(JSON.stringify(IB_DEFAULT_IDEAS));
+        ibNextId = 20;
+      }
     }
-    function ibSaveData() { try { localStorage.setItem(IB_LS, JSON.stringify({ ideas: ibIdeas, nextId: ibNextId })); } catch (e) { } }
 
+    // ── PERSISTENCE: save current state to localStorage ──
+    function ibSaveData() {
+      try {
+        const payload = JSON.stringify({ ideas: ibIdeas, nextId: ibNextId });
+        localStorage.setItem(IB_LS, payload);
+      } catch (e) {
+        // Warn but don't break the UI (e.g. storage quota exceeded or private-mode restrictions)
+        console.warn('[IdeaBoard] Could not save to localStorage:', e);
+      }
+    }
+
+    // ibInitialized tracks whether ibLoadData has already run so we don't
+    // re-load from localStorage (and overwrite in-memory state) on every tab switch.
     let ibInitialized = false;
+
     function ibRenderAll() {
-      if (!ibInitialized) { ibLoadData(); ibInitialized = true; }
+      if (!ibInitialized) {
+        // Only load from storage if init() hasn't already done it
+        ibLoadData();
+        ibInitialized = true;
+      }
       ibRenderSidebar(); ibUpdateBadges(); ibUpdateStats(); ibRenderTagCloud(); ibRenderIdeas();
     }
 
@@ -3523,6 +3553,11 @@
        INIT
     ══════════════════════════════════════════════ */
     (function init() {
+      // ── Load idea board data eagerly at startup ──
+      // This ensures ibIdeas is populated before any tab switch or render
+      ibLoadData();
+      ibInitialized = true;
+
       const savedTheme = localStorage.getItem('ucsc_theme') || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
       document.getElementById('themeBtn').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
@@ -3544,6 +3579,11 @@
       renderSessionDots(); updateTimerDisplay(); updateSliderStyles();
       setTimeout(calculateGPA, 200);
     })();
+
+    // ── Safety-net: persist idea board data when the page is about to unload ──
+    window.addEventListener('beforeunload', function () {
+      ibSaveData();
+    });
 
     document.addEventListener('keydown', e => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
